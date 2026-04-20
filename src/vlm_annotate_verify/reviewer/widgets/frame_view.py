@@ -59,6 +59,7 @@ class FrameView(Widget):
         self.boundaries = boundaries
         self.duration_s = duration_s
         self._timer_handle = None
+        self._viewers: list = []
 
     def compose(self) -> ComposeResult:
         if ImageViewer is None:
@@ -70,9 +71,11 @@ class FrameView(Widget):
         if ImageViewer is None:
             return
         grid = self.query_one("#frame-grid", Grid)
-        for i, p in enumerate(self.frame_paths):
-            viewer = ImageViewer(image=str(p), id=f"frame-{i}")
+        self._viewers = []
+        for p in self.frame_paths:
+            viewer = ImageViewer(image=str(p))
             grid.mount(viewer)
+            self._viewers.append(viewer)
         self._highlight_cursor()
 
     def watch_cursor(self, _old: int, _new: int) -> None:
@@ -87,12 +90,11 @@ class FrameView(Widget):
     def _highlight_cursor(self) -> None:
         if ImageViewer is None or not self.is_mounted:
             return
-        for i in range(len(self.frame_paths)):
+        for i, w in enumerate(self._viewers):
             try:
-                w = self.query_one(f"#frame-{i}", ImageViewer)
+                w.styles.border = ("solid", "cyan") if i == self.cursor else None
             except Exception:
                 continue
-            w.styles.border = ("solid", "cyan") if i == self.cursor else None
 
     def _start_replay(self) -> None:
         try:
