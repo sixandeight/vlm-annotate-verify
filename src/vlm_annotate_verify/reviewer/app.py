@@ -101,9 +101,12 @@ class MistakeModal(ModalScreen[Mistake | None]):
 class ReviewerApp(App):
     CSS = """
     Screen { layout: vertical; }
-    Header { dock: top; }
-    #footer { dock: bottom; }
-    #main { height: 1fr; width: 100%; overflow-y: auto; }
+    #main {
+        height: 1fr;
+        min-height: 20;
+        width: 100%;
+        overflow-y: auto;
+    }
     Timeline { width: 100%; }
     FrameView { width: 100%; }
     VLMPanel { width: 100%; }
@@ -134,21 +137,9 @@ class ReviewerApp(App):
         self.reprompt_used = False
 
     def on_mount(self) -> None:
-        import traceback
         self._load_queue()
-        main = self.query_one("#main", Vertical)
-        main.mount(Static(
-            f"[debug] queue={len(self.queue)} idx={self.queue_idx}",
-            id="debug-line",
-        ))
-        if not self.queue:
-            main.mount(Static("Queue empty - all eps verified."))
-            return
-        try:
+        if self.queue:
             self._render_current()
-        except Exception as e:
-            tb = traceback.format_exc()
-            main.mount(Static(f"[render failed] {e}\n{tb}"))
 
     def _load_queue(self) -> None:
         all_proposals = load_proposals(self.proposals_path)
@@ -247,7 +238,7 @@ class ReviewerApp(App):
         if action is Action.EDIT_TASK:
             panel = self.query_one(VLMPanel)
             self.push_screen(
-                TextInputModal("Edit task description", panel.task),
+                TextInputModal("Edit task description", panel.ep_task),
                 self._on_task_edited,
             )
             return
@@ -306,7 +297,7 @@ class ReviewerApp(App):
             return
         verified = Verified(
             ep_id=prop.ep_id,
-            task=panel.task,
+            task=panel.ep_task,
             boundaries=self.current_boundaries,
             segments=list(panel.segments),
             review=Review(
@@ -344,7 +335,7 @@ class ReviewerApp(App):
         self.reprompt_used = True
         try:
             panel = self.query_one(VLMPanel)
-            panel.task = task
+            panel.ep_task = task
             panel.segments = list(segments)
             panel.refresh_text()
             timeline = self.query_one(Timeline)
