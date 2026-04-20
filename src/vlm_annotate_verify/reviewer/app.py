@@ -290,7 +290,7 @@ class ReviewerApp(App):
             ep_id=prop.ep_id,
             task=panel.task,
             boundaries=self.current_boundaries,
-            segments=self.current_segments,
+            segments=list(panel.segments),
             review=Review(
                 reviewer_id=self.reviewer_id,
                 review_seconds=time.monotonic() - self.start_time,

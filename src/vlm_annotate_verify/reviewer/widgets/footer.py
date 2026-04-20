@@ -11,7 +11,7 @@ COMPACT = "KEYS: SPACE=accept  m=+mistake  r=re-prompt  j/k=nav  ?=help"
 FULL = """\
 Quality:    + -    or 1 2 3 4 5
 Success:    s (toggle)
-Mistakes:   m=add  x=delete  t=change type  b=change subtask  n=edit note
+Mistakes:   m=add  x=delete
 Task:       e=edit task description
 Actions:    SPACE=accept all   ENTER=commit+next   r=re-prompt VLM
 Nav:        j=next  k=prev  q=save+quit  f=full-screen frame  ?=help"""

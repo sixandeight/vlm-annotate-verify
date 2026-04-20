@@ -26,9 +26,6 @@ def test_dispatch_success_toggle():
 def test_dispatch_mistake_keys():
     assert dispatch("m") is Action.MISTAKE_ADD
     assert dispatch("x") is Action.MISTAKE_DELETE
-    assert dispatch("t") is Action.MISTAKE_CHANGE_TYPE
-    assert dispatch("b") is Action.MISTAKE_CHANGE_SUBTASK
-    assert dispatch("n") is Action.MISTAKE_EDIT_NOTE
 
 
 def test_dispatch_task_editor():

@@ -17,9 +17,6 @@ class Action(str, Enum):
 
     MISTAKE_ADD = "MISTAKE_ADD"
     MISTAKE_DELETE = "MISTAKE_DELETE"
-    MISTAKE_CHANGE_TYPE = "MISTAKE_CHANGE_TYPE"
-    MISTAKE_CHANGE_SUBTASK = "MISTAKE_CHANGE_SUBTASK"
-    MISTAKE_EDIT_NOTE = "MISTAKE_EDIT_NOTE"
 
     EDIT_TASK = "EDIT_TASK"
 
@@ -45,9 +42,6 @@ KEYMAP: dict[str, Action] = {
     "s": Action.SUCCESS_TOGGLE,
     "m": Action.MISTAKE_ADD,
     "x": Action.MISTAKE_DELETE,
-    "t": Action.MISTAKE_CHANGE_TYPE,
-    "b": Action.MISTAKE_CHANGE_SUBTASK,
-    "n": Action.MISTAKE_EDIT_NOTE,
     "e": Action.EDIT_TASK,
     "space": Action.ACCEPT_ALL,
     "enter": Action.COMMIT_NEXT,

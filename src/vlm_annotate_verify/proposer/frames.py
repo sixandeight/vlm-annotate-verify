@@ -35,13 +35,17 @@ def extract_frames(
     """Extract num_frames evenly spaced from video. Skip any that already exist."""
     out_dir.mkdir(parents=True, exist_ok=True)
     expected = [out_dir / f"{i:02d}.jpg" for i in range(1, num_frames + 1)]
-    if all(p.exists() for p in expected):
+    if all(p.exists() and p.stat().st_size > 0 for p in expected):
         return expected
     duration = get_video_duration(video_path)
+    if duration <= 0:
+        raise FrameExtractionError(
+            f"invalid video duration ({duration}) for {video_path}"
+        )
     timestamps = [duration * (i + 0.5) / num_frames for i in range(num_frames)]
     for i, t in enumerate(timestamps, start=1):
         out_path = out_dir / f"{i:02d}.jpg"
-        if out_path.exists():
+        if out_path.exists() and out_path.stat().st_size > 0:
             continue
         result = subprocess.run(
             [

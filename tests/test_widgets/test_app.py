@@ -155,6 +155,7 @@ def test_commit_writes_verified_line(tmp_path, monkeypatch):
     # Stub has_unfixed_generic_notes and query_one for the panel
     class _FakePanel:
         task = "place cube on shelf"
+        segments = list(app.queue[0].segments)
         def has_unfixed_generic_notes(self):
             return False
 
@@ -170,6 +171,56 @@ def test_commit_writes_verified_line(tmp_path, monkeypatch):
     assert parsed["task"] == "place cube on shelf"
     assert parsed["review"]["actions"] == ["accept"]
     assert parsed["review"]["review_seconds"] == pytest.approx(4.2)
+
+
+def test_commit_writes_panel_edited_segments(tmp_path, monkeypatch):
+    """Regression: panel edits must be written, not the stale copy."""
+    from vlm_annotate_verify.schemas import Segment, Mistake
+    _write_jsonl(tmp_path / "proposals.jsonl", [
+        _sample_proposal("ep_000").to_json(),
+    ])
+    app = ReviewerApp(
+        dataset_root=tmp_path,
+        gemini_config=GeminiConfig(api_key="x"),
+        reviewer_id="nathan",
+    )
+    app._load_queue()
+    app.current_boundaries = app.queue[0].boundaries
+    app.current_segments = list(app.queue[0].segments)
+    app.actions_log = ["q=5"]
+    app.reprompt_used = False
+    app.start_time = 0.0
+    monkeypatch.setattr(
+        "vlm_annotate_verify.reviewer.app.time.monotonic",
+        lambda: 4.2,
+    )
+
+    # Simulate an edited panel — quality has been raised to 5,
+    # AND a fresh mistake has been added.
+    edited_seg = Segment(
+        idx=0, start_s=0.0, end_s=5.0,
+        quality=5, quality_conf=1.0,
+        success=True, success_conf=1.0,
+        mistakes=[Mistake(type="slip", t_s=1.0, note="meaningful note",
+                          confidence=1.0)],
+        reasoning="smooth",
+    )
+
+    class _FakePanel:
+        task = "edited task"
+        segments = [edited_seg]
+        def has_unfixed_generic_notes(self):
+            return False
+
+    app.query_one = lambda _cls=None: _FakePanel()  # type: ignore[assignment]
+    app._render_current = lambda: None  # type: ignore[assignment]
+    app._commit_and_next()
+
+    lines = (tmp_path / "verified.jsonl").read_text().strip().splitlines()
+    parsed = json.loads(lines[0])
+    assert parsed["task"] == "edited task"
+    assert parsed["segments"][0]["quality"] == 5
+    assert parsed["segments"][0]["mistakes"][0]["note"] == "meaningful note"
 
 
 def test_commit_blocks_on_generic_note(tmp_path):
