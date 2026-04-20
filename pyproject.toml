@@ -24,3 +24,6 @@ vlm-annotate-verify = "vlm_annotate_verify.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/vlm_annotate_verify"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
