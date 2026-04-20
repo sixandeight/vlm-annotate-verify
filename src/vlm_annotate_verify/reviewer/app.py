@@ -101,6 +101,7 @@ class MistakeModal(ModalScreen[Mistake | None]):
 class ReviewerApp(App):
     CSS = """
     Screen { layout: vertical; }
+    #main { height: 1fr; overflow-y: auto; }
     """
 
     BINDINGS = [Binding("ctrl+c", "quit", "Quit", priority=True)]
