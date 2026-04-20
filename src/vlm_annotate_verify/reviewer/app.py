@@ -101,15 +101,6 @@ class MistakeModal(ModalScreen[Mistake | None]):
 class ReviewerApp(App):
     CSS = """
     Screen { layout: vertical; }
-    #main {
-        height: 1fr;
-        min-height: 20;
-        width: 100%;
-        overflow-y: auto;
-    }
-    Timeline { width: 100%; }
-    FrameView { width: 100%; }
-    VLMPanel { width: 100%; }
     """
 
     BINDINGS = [Binding("ctrl+c", "quit", "Quit", priority=True)]
@@ -238,7 +229,7 @@ class ReviewerApp(App):
         if action is Action.EDIT_TASK:
             panel = self.query_one(VLMPanel)
             self.push_screen(
-                TextInputModal("Edit task description", panel.ep_task),
+                TextInputModal("Edit task description", panel.task),
                 self._on_task_edited,
             )
             return
@@ -297,7 +288,7 @@ class ReviewerApp(App):
             return
         verified = Verified(
             ep_id=prop.ep_id,
-            task=panel.ep_task,
+            task=panel.task,
             boundaries=self.current_boundaries,
             segments=list(panel.segments),
             review=Review(
@@ -335,7 +326,7 @@ class ReviewerApp(App):
         self.reprompt_used = True
         try:
             panel = self.query_one(VLMPanel)
-            panel.ep_task = task
+            panel.task = task
             panel.segments = list(segments)
             panel.refresh_text()
             timeline = self.query_one(Timeline)

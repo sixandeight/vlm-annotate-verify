@@ -2,7 +2,10 @@
 import re
 from dataclasses import replace
 
+from textual.app import ComposeResult
+from textual.containers import Vertical
 from textual.reactive import reactive
+from textual.widget import Widget
 from textual.widgets import Static
 
 from vlm_annotate_verify.schemas import Mistake, Segment
@@ -21,23 +24,31 @@ def is_generic_note(note: str) -> bool:
     return any(re.search(p, n) for p in GENERIC_NOTE_PATTERNS)
 
 
-class VLMPanel(Static):
+class VLMPanel(Widget):
     seg_index: reactive[int] = reactive(0)
 
     DEFAULT_CSS = """
-    VLMPanel { height: auto; padding: 1 1; }
+    VLMPanel { height: auto; padding: 1 1; border: round white; }
     """
 
     def __init__(self, segments: list[Segment], task: str) -> None:
-        super().__init__("")
+        super().__init__()
         self.segments: list[Segment] = list(segments)
-        self.ep_task = task
+        self._task = task
 
-    def on_mount(self) -> None:
-        self.refresh_text()
+    @property
+    def task(self) -> str:  # type: ignore[override]
+        return self._task
+
+    @task.setter
+    def task(self, value: str) -> None:
+        self._task = value
+
+    def compose(self) -> ComposeResult:
+        yield Vertical(Static(self._render(), id="vlm-text"))
 
     def _render(self) -> str:
-        lines = [f"Task: {self.ep_task}", ""]
+        lines = [f"Task: {self._task}", ""]
         for i, seg in enumerate(self.segments):
             marker = ">" if i == self.seg_index else " "
             lines.append(
@@ -58,9 +69,10 @@ class VLMPanel(Static):
 
     def refresh_text(self) -> None:
         try:
-            self.update(self._render())
+            static = self.query_one("#vlm-text", Static)
         except Exception:
-            pass
+            return
+        static.update(self._render())
 
     def set_quality(self, q: int) -> None:
         q = max(1, min(5, q))
@@ -96,7 +108,7 @@ class VLMPanel(Static):
         self.refresh_text()
 
     def update_task(self, new_task: str) -> None:
-        self.ep_task = new_task
+        self._task = new_task
         self.refresh_text()
 
     def has_unfixed_generic_notes(self) -> bool:
