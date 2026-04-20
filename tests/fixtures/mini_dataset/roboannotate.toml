@@ -1,0 +1,5 @@
+operator_id = "nathan"
+station_id = "home_lab"
+robot_id = "aloha_01"
+is_eval_episode = false
+dataset_name = "mini_dataset"
