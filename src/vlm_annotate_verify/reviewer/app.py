@@ -7,7 +7,8 @@ from pathlib import Path
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Vertical
-from textual.widgets import Header, Static
+from textual.screen import ModalScreen
+from textual.widgets import Header, Input, Select, Static
 
 from vlm_annotate_verify.proposer.gemini import (
     GeminiConfig, MODEL_PRO, GeminiError,
@@ -20,11 +21,11 @@ from vlm_annotate_verify.reviewer.confidence import (
 )
 from vlm_annotate_verify.reviewer.keymap import Action, dispatch
 from vlm_annotate_verify.reviewer.widgets.footer import KeybindFooter
-from vlm_annotate_verify.reviewer.widgets.frame_view import FrameView
+from vlm_annotate_verify.reviewer.widgets.frame_view import FrameMode, FrameView
 from vlm_annotate_verify.reviewer.widgets.timeline import Timeline
 from vlm_annotate_verify.reviewer.widgets.vlm_panel import VLMPanel
 from vlm_annotate_verify.schemas import (
-    Boundary, Proposal, Review, Segment, Verified, utc_now_iso,
+    Boundary, Mistake, Proposal, Review, Segment, Verified, utc_now_iso,
 )
 
 
@@ -54,6 +55,47 @@ def already_verified_ids(path: Path) -> set[str]:
         except (json.JSONDecodeError, KeyError):
             continue
     return out
+
+
+MISTAKE_TYPES = ["drop", "slip", "miss", "collision", "other"]
+
+
+class TextInputModal(ModalScreen[str]):
+    def __init__(self, prompt: str, initial: str = "") -> None:
+        super().__init__()
+        self._prompt = prompt
+        self._initial = initial
+
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static(self._prompt),
+            Input(value=self._initial, id="text-input"),
+        )
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        self.dismiss(event.value)
+
+
+class MistakeModal(ModalScreen[Mistake | None]):
+    def __init__(self, default_t_s: float) -> None:
+        super().__init__()
+        self._default_t_s = default_t_s
+
+    def compose(self) -> ComposeResult:
+        yield Vertical(
+            Static("Add mistake - pick type, then type a note and press enter"),
+            Select([(t, t) for t in MISTAKE_TYPES], id="mistake-type", value="slip"),
+            Input(placeholder="note (e.g. cube wobble)", id="mistake-note"),
+        )
+
+    def on_input_submitted(self, event: Input.Submitted) -> None:
+        type_select = self.query_one("#mistake-type", Select)
+        self.dismiss(Mistake(
+            type=str(type_select.value),
+            t_s=self._default_t_s,
+            note=event.value,
+            confidence=1.0,
+        ))
 
 
 class ReviewerApp(App):
@@ -175,6 +217,29 @@ class ReviewerApp(App):
         }:
             self._apply_panel_action(action)
             return
+        if action is Action.MISTAKE_ADD:
+            self.push_screen(
+                MistakeModal(default_t_s=0.0),
+                self._on_mistake_added,
+            )
+            return
+        if action is Action.MISTAKE_DELETE:
+            self._delete_current_mistake()
+            return
+        if action is Action.EDIT_TASK:
+            panel = self.query_one(VLMPanel)
+            self.push_screen(
+                TextInputModal("Edit task description", panel.task),
+                self._on_task_edited,
+            )
+            return
+        if action is Action.FULL_FRAME:
+            frames = self.query_one(FrameView)
+            if frames.mode is FrameMode.SCRUB:
+                frames.enter_grid()
+            else:
+                frames.enter_scrub()
+            return
         if action is Action.NAV_NEXT:
             self._advance(1)
             return
@@ -269,3 +334,25 @@ class ReviewerApp(App):
         except Exception:
             pass
         self.actions_log.append("reprompt:pro")
+
+    def _on_mistake_added(self, mistake: Mistake | None) -> None:
+        if mistake is None:
+            return
+        panel = self.query_one(VLMPanel)
+        panel.add_mistake(mistake)
+        self.actions_log.append(f"add_mistake:{mistake.type}")
+
+    def _on_task_edited(self, new_task: str | None) -> None:
+        if new_task is None:
+            return
+        panel = self.query_one(VLMPanel)
+        panel.update_task(new_task)
+        self.actions_log.append("edit_task")
+
+    def _delete_current_mistake(self) -> None:
+        panel = self.query_one(VLMPanel)
+        seg = panel.segments[panel.seg_index]
+        if not seg.mistakes:
+            return
+        panel.delete_mistake(len(seg.mistakes) - 1)
+        self.actions_log.append("delete_mistake")
