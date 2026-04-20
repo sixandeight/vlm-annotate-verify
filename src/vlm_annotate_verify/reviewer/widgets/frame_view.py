@@ -14,8 +14,10 @@ from textual.reactive import reactive
 from textual.widget import Widget
 
 try:
+    from PIL import Image
     from textual_imageview.viewer import ImageViewer
 except ImportError:  # pragma: no cover - optional at test time
+    Image = None  # type: ignore[assignment]
     ImageViewer = None  # type: ignore[assignment]
 
 from vlm_annotate_verify.schemas import Boundary
@@ -68,12 +70,17 @@ class FrameView(Widget):
         yield grid
 
     def on_mount(self) -> None:
-        if ImageViewer is None:
+        if ImageViewer is None or Image is None:
             return
         grid = self.query_one("#frame-grid", Grid)
         self._viewers = []
         for p in self.frame_paths:
-            viewer = ImageViewer(image=str(p))
+            try:
+                img = Image.open(str(p))
+                img.load()
+            except Exception:
+                continue
+            viewer = ImageViewer(image=img)
             grid.mount(viewer)
             self._viewers.append(viewer)
         self._highlight_cursor()
