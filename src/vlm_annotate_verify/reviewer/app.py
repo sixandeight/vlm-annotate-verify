@@ -134,9 +134,21 @@ class ReviewerApp(App):
         self.reprompt_used = False
 
     def on_mount(self) -> None:
+        import traceback
         self._load_queue()
-        if self.queue:
+        main = self.query_one("#main", Vertical)
+        main.mount(Static(
+            f"[debug] queue={len(self.queue)} idx={self.queue_idx}",
+            id="debug-line",
+        ))
+        if not self.queue:
+            main.mount(Static("Queue empty - all eps verified."))
+            return
+        try:
             self._render_current()
+        except Exception as e:
+            tb = traceback.format_exc()
+            main.mount(Static(f"[render failed] {e}\n{tb}"))
 
     def _load_queue(self) -> None:
         all_proposals = load_proposals(self.proposals_path)
