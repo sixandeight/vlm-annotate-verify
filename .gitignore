@@ -9,3 +9,5 @@ frames/
 proposals.jsonl
 verified.jsonl
 export/
+
+.env
