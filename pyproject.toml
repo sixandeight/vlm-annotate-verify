@@ -9,6 +9,7 @@ description = "VLM-proposed robot episode annotation with TUI verification"
 requires-python = ">=3.12"
 dependencies = [
     "textual>=0.80",
+    "textual-imageview>=0.1",
     "google-genai>=0.7",
 ]
 
